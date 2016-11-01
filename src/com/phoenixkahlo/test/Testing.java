@@ -20,8 +20,13 @@ public class Testing {
 	 * Execute all {@link com.phoenixkahlo.test.Test tests} in the given class.
 	 */
 	public static void test(Class<?> clazz) {
+		System.out.println("testing class \"" + clazz.getSimpleName() + "\"");
 		Arrays.stream(clazz.getMethods()).filter(method -> method.isAnnotationPresent(Test.class)).forEach(method -> {
-			System.out.println("running " + method.getName());
+			Test annotation = method.getAnnotation(Test.class);
+			if (annotation.name().equals("$unnamed"))
+				System.out.println("running \"" + method.getName() + "\"");
+			else
+				System.out.println("running \"" + annotation.name() + "\"");
 			try {
 				method.invoke(null);
 				System.out.println("test returned");
@@ -29,6 +34,7 @@ public class Testing {
 				System.out.println("test failed with exception: " + e);
 			}
 		});
+		System.out.println("\"" + clazz.getSimpleName() + "\" complete");
 	}
 
 	/**

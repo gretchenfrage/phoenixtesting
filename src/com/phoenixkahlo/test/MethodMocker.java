@@ -10,6 +10,11 @@ import java.util.function.Predicate;
  */
 public class MethodMocker {
 
+	/**
+	 * A function that returns null, suitable for void methods.
+	 */
+	public static final Function<Object[], Void> VOID = args -> null;
+	
 	public static enum Mode {
 		/**
 		 * A queue of responses, with predicates that will be asserted.
@@ -30,9 +35,9 @@ public class MethodMocker {
 	private static class PredicateFunctionPair {
 
 		Predicate<Object[]> predicate;
-		Function<Object[], Object> function;
+		Function<Object[], ? extends Object> function;
 
-		PredicateFunctionPair(Predicate<Object[]> predicate, Function<Object[], Object> function) {
+		PredicateFunctionPair(Predicate<Object[]> predicate, Function<Object[], ? extends Object> function) {
 			this.predicate = predicate;
 			this.function = function;
 		}
@@ -52,13 +57,13 @@ public class MethodMocker {
 		responses = new ArrayList<>();
 	}
 
-	public void queueResponse(Predicate<Object[]> predicate, Function<Object[], Object> function) {
+	public void queueResponse(Predicate<Object[]> predicate, Function<Object[], ? extends Object> function) {
 		if (mode != Mode.RESPONSE_QUEUE)
 			setMode(Mode.RESPONSE_QUEUE);
 		responses.add(0, new PredicateFunctionPair(predicate, function));
 	}
 
-	public void queueResponse(Function<Object[], Object> function) {
+	public void queueResponse(Function<Object[], ? extends Object> function) {
 		queueResponse(args -> true, function);
 	}
 
@@ -69,8 +74,12 @@ public class MethodMocker {
 	public void queueResponse(Predicate<Object[]> predicate, Object response) {
 		queueResponse(predicate, args -> response);
 	}
+	
+	public void queueAssert(Predicate<Object[]> predicate) {
+		queueResponse(predicate, VOID);
+	}
 
-	public void setResponse(Predicate<Object[]> predicate, Function<Object[], Object> function) {
+	public void setResponse(Predicate<Object[]> predicate, Function<Object[], ? extends Object> function) {
 		if (mode != Mode.PERSISTENT_RESPONSE)
 			setMode(Mode.PERSISTENT_RESPONSE);
 		PredicateFunctionPair pair = new PredicateFunctionPair(predicate, function);
@@ -80,7 +89,7 @@ public class MethodMocker {
 			responses.set(0, pair);
 	}
 
-	public void setResponse(Function<Object[], Object> function) {
+	public void setResponse(Function<Object[], ? extends Object> function) {
 		setResponse(args -> true, function);
 	}
 
@@ -91,8 +100,12 @@ public class MethodMocker {
 	public void setResponse(Predicate<Object[]> predicate, Object response) {
 		setResponse(predicate, args -> response);
 	}
+	
+	public void setAssert(Predicate<Object[]> predicate) {
+		setResponse(predicate, VOID);
+	}
 
-	public void addResponse(Predicate<Object[]> predicate, Function<Object[], Object> response) {
+	public void addResponse(Predicate<Object[]> predicate, Function<Object[], ? extends Object> response) {
 		if (mode != Mode.PREDICATE_RESPONSE_SET)
 			setMode(Mode.PREDICATE_RESPONSE_SET);
 		responses.add(new PredicateFunctionPair(predicate, response));
@@ -100,6 +113,13 @@ public class MethodMocker {
 
 	public void addResponse(Predicate<Object[]> predicate, Object response) {
 		addResponse(predicate, args -> response);
+	}
+	
+	public void assertQueueEmpty() {
+		if (mode == Mode.RESPONSE_QUEUE)
+			assert responses.isEmpty();
+		else
+			throw new IllegalStateException("assertQueueEmpty invoked while not in queue mode");
 	}
 
 	Object handle(Object[] args) {
